@@ -6,7 +6,7 @@ Proxy to transfer Sambanova API to OpenAI compatible API.
 
 ```shell
 npm install express axios body-parser
-node server.js
+node proxy.js
 ```
 
 So you can use the OpenAI style API to call `llama3-405b` (i.e., Llama3.1-405B).

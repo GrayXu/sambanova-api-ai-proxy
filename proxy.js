@@ -4,12 +4,17 @@ const bodyParser = require('body-parser');
 
 const app = express();
 
+const FAST_API_URL = process.env.FAST_API_URL || 'https://fast-api.snova.ai/v1/chat/completions';
+const PORT = process.env.PORT || 11436;
+const MODEL_OVERRIDE = process.env.MODEL_OVERRIDE || '';
 
-const FAST_API_URL = 'https://fast-api.snova.ai/v1/chat/completions';
-const PORT = 11436;
-const MODEL_OVERRIDE = ''; // Set this to null or an empty string if you don't want to override
-const AUTH_TOKEN = 'Basic XXXXXXXXXXXXXXXXX';  // Replace the basic authorization token with your actual value
+if (!process.env.AUTH_TOKEN) {
+  console.error("Error: AUTH_TOKEN environment variable is empty. Please set it before running the application.");
+  process.exit(1);
+}
+const AUTH_TOKEN = process.env.AUTH_TOKEN;
 
+const HTTP_PROXY = process.env.HTTP_PROXY;
 
 app.use(bodyParser.json());
 
@@ -27,7 +32,6 @@ function sendErrorResponse(res, status, response) {
 app.post('/v1/chat/completions', (req, res) => {
   let body = req.body;
 
-  // Override the model if MODEL_OVERRIDE is set
   if (MODEL_OVERRIDE && MODEL_OVERRIDE.trim() !== '') {
     body.model = MODEL_OVERRIDE;
   }
@@ -37,13 +41,23 @@ app.post('/v1/chat/completions', (req, res) => {
     stop: ["<|eot_id|>"]
   };
 
-  const axiosInstance = axios.create({
+  const axiosOptions = {
     responseType: 'stream',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': AUTH_TOKEN
+      'Authorization': 'Basic ' + AUTH_TOKEN
     },
-  });
+  };
+
+  if (HTTP_PROXY) {
+    axiosOptions.proxy = {
+      host: new URL(HTTP_PROXY).hostname,
+      port: new URL(HTTP_PROXY).port,
+      protocol: new URL(HTTP_PROXY).protocol,
+    };
+  }
+
+  const axiosInstance = axios.create(axiosOptions);
 
   axiosInstance.post(FAST_API_URL, modifiedPayload)
   .then(response => {
@@ -68,5 +82,7 @@ app.post('/v1/chat/completions', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
+  console.log(`AUTH_TOKEN: ${AUTH_TOKEN}`);
+  console.log(`FAST_API_URL: ${FAST_API_URL}`);
   console.log(`Model override: ${MODEL_OVERRIDE || 'Not set'}`);
 });

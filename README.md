@@ -26,6 +26,26 @@ curl http://localhost:11436/v1/chat/completions   -H "Content-Type: application/
   }'
 ```
 
+## cloudflare worker
+
+Copy and paste the content of [cf-worker.js](https://github.com/GrayXu/sambanova-api-ai-proxy/blob/main/cf-worker.js) into your cloudflare worker and deploy. The Sambanova AI Proxy Server will be on your cloudflare worker as a serverless endpoint!
+
+```shell
+curl https://xxxxxx.workers.dev/v1/models  # query models
+
+# For compatibility, the API key is passed in bearer token format (originally intended for basic auth).
+curl https://xxxxxx.workers.dev/v1/chat/completions   -H "Content-Type: application/json"  -H "Authorization: Bearer XXXXXXX" -d '{
+    "model": "llama3-405b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "which model is you?"
+      }
+    ],
+    "stream": true
+  }'
+```
+
 ## docker
 
 ```shell

@@ -2,19 +2,25 @@
 
 Proxy to transfer Sambanova API to OpenAI compatible API.
 
-Configure `FAST_API_URL`, `PORT`, `MODEL_OVERRIDE`, `HTTP_PROXY`, and `AUTH_TOKEN` in ENV, and run the service.
+If you just want to act as a simple relay, just run the service.
+For compatibility, the bearer token passed by the client is used internally as basic auth for the Sambanova API.
 
-MODEL_OVERRIDE is used to enforce a specific model type, such as `llama3-405b`.
-
-example to run service:  
 ```shell
 npm install express axios body-parser http-proxy-agent
-AUTH_TOKEN='XXXXXXXXXXXX' node proxy.js
+node proxy.js
 ```
 
-So that you can use the OpenAI compatible API to call `llama3-405b` (i.e., Llama3.1-405B).
+In addition, you can configure `FAST_API_URL`, `PORT`, `MODEL_OVERRIDE`, `HTTP_PROXY`, and `AUTH_TOKEN` in ENV to force specify parameters such as token(apikey) and models.
 ```shell
-curl http://localhost:11436/v1/chat/completions   -H "Content-Type: application/json"  -d '{
+MODEL_OVERRIDE='llama3-405b' AUTH_TOKEN='XXXXXXXXXXXX' node proxy.js
+```
+
+Client request example:
+
+```shell
+curl https://localhost:11436/v1/models  # query models
+
+curl https://localhost:11436/v1/chat/completions   -H "Content-Type: application/json"  -H "Authorization: Bearer XXXXXXX" -d '{
     "model": "llama3-405b",
     "messages": [
       {
@@ -29,22 +35,6 @@ curl http://localhost:11436/v1/chat/completions   -H "Content-Type: application/
 ## cloudflare worker
 
 Copy and paste the content of [cf-worker.js](https://github.com/GrayXu/sambanova-api-ai-proxy/blob/main/cf-worker.js) into your cloudflare worker and deploy. The Sambanova AI Proxy Server will be on your cloudflare worker as a serverless endpoint!
-
-```shell
-curl https://xxxxxx.workers.dev/v1/models  # query models
-
-# For compatibility, the API key is passed in bearer token format (originally intended for basic auth).
-curl https://xxxxxx.workers.dev/v1/chat/completions   -H "Content-Type: application/json"  -H "Authorization: Bearer XXXXXXX" -d '{
-    "model": "llama3-405b",
-    "messages": [
-      {
-        "role": "user",
-        "content": "which model is you?"
-      }
-    ],
-    "stream": true
-  }'
-```
 
 ## docker
 

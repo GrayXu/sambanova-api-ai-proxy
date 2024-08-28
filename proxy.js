@@ -7,13 +7,6 @@ const app = express();
 const FAST_API_URL = process.env.FAST_API_URL || 'https://fast-api.snova.ai/v1/chat/completions';
 const PORT = process.env.PORT || 11436;
 const MODEL_OVERRIDE = process.env.MODEL_OVERRIDE || '';
-
-if (!process.env.AUTH_TOKEN) {
-  console.error("Error: AUTH_TOKEN environment variable is empty. Please set it before running the application.");
-  process.exit(1);
-}
-const AUTH_TOKEN = process.env.AUTH_TOKEN;
-
 const HTTP_PROXY = process.env.HTTP_PROXY;
 
 app.use(bodyParser.json());
@@ -24,7 +17,7 @@ function sendErrorResponse(res, status, response) {
         cleanResponse = JSON.parse(JSON.stringify(response)); // Attempt to stringify to remove circular refs
     } catch (err) {
         const util = require('util');
-        cleanResponse = util.inspect(response); // Fallback to util.inspect to handle circular refs
+        cleanResponse = util.inspect(err); // Fallback to util.inspect to handle circular refs
     }
     res.status(status).json({ message: 'Internal Server Error', detail: cleanResponse });
 }
@@ -36,6 +29,15 @@ app.post('/v1/chat/completions', (req, res) => {
     body.model = MODEL_OVERRIDE;
   }
 
+  // Get the AUTH_TOKEN from environment or client's bearer token
+  const authToken = process.env.AUTH_TOKEN || (req.headers['authorization'] && req.headers['authorization'].replace(/^bearer /i, ''));
+
+  if (!authToken) {
+    return res.status(401).json({ message: 'Unauthorized: No AUTH_TOKEN provided' });
+  } else {
+    console.log('Auth Token:', authToken);
+  }
+
   const modifiedPayload = {
     ...body,
     stop: ["<|eot_id|>"]
@@ -45,7 +47,7 @@ app.post('/v1/chat/completions', (req, res) => {
     responseType: 'stream',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Basic ' + AUTH_TOKEN
+      'Authorization': 'Basic ' + authToken
     },
   };
 
@@ -80,9 +82,46 @@ app.post('/v1/chat/completions', (req, res) => {
   });
 });
 
+app.get('/v1/models', (req, res) => {
+  const modelsResponse = {
+    "object": "list",
+    "data": [
+      {
+        "id": "llama3-405b",
+        "object": "model",
+        "created": 1686935002,
+        "owned_by": "sambanova-ai"
+      },
+      {
+        "id": "Meta-Llama-3.1-405B-Instruct",
+        "object": "model",
+        "created": 1686935002,
+        "owned_by": "sambanova-ai",
+      },
+      {
+        "id": "Meta-Llama-3.1-70B-Instruct",
+        "object": "model",
+        "created": 1686935002,
+        "owned_by": "sambanova-ai",
+      },
+      {
+        "id": "Meta-Llama-3.1-8B-Instruct",
+        "object": "model",
+        "created": 1686935002,
+        "owned_by": "sambanova-ai",
+      },
+    ],
+  };
+  res.json(modelsResponse);
+});
+
 app.listen(PORT, () => {
+  if (process.env.AUTH_TOKEN) {
+    console.log(`Using AUTH_TOKEN from environment`);
+  } else {
+    console.log(`No AUTH_TOKEN found in environment. Will use client-provided bearer token.`);
+  } 
   console.log(`Server is listening on port ${PORT}`);
-  console.log(`AUTH_TOKEN: ${AUTH_TOKEN}`);
   console.log(`FAST_API_URL: ${FAST_API_URL}`);
   console.log(`Model override: ${MODEL_OVERRIDE || 'Not set'}`);
 });
